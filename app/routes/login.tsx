@@ -1,11 +1,78 @@
+import type { ActionFunction, LoaderFunction } from "@remix-run/node";
+import { redirect, Request } from "@remix-run/node";
+import { json } from "@remix-run/node";
 import { useState } from "react";
 import Layout from "~/components/layout";
+import { getUser, login, register } from "~/utils/auth.server";
+import {
+  validateEmail,
+  validateName,
+  validatePassword,
+} from "~/utils/validators.server";
 import FormField from "./../components/form-field";
 
 const styles = {
   button:
     "px-3 py-2 mt-2 font-semibold text-white transition duration-300 ease-in-out bg-blue-700 cursor-pointer rounded-xl hover:bg-blue-300 hover:-translate-y-1",
 };
+export const action: ActionFunction = async ({ request }) => {
+  const form = await request.formData();
+  const action = form.get("_action");
+  const email = form.get("email");
+  const password = form.get("password");
+  let firstName = form.get("firstName");
+  let lastName = form.get("lastName");
+
+  if (
+    typeof action !== "string" ||
+    typeof email !== "string" ||
+    typeof password !== "string"
+  ) {
+    return json({ error: `Invalid Form Data`, form: action }, { status: 400 });
+  }
+  if (
+    action === "register" &&
+    (typeof firstName !== "string" || typeof lastName !== "string")
+  ) {
+    return json({ error: `Invalid Form Data`, form: action }, { status: 400 });
+  }
+  const errors = {
+    email: validateEmail(email),
+    password: validatePassword(password),
+    ...(action === "register"
+      ? {
+          firstName: validateName((firstName as string) || ""),
+          lastName: validateName((lastName as string) || ""),
+        }
+      : {}),
+  };
+
+  if (Object.values(errors).some(Boolean))
+    return json(
+      {
+        errors,
+        fields: { email, password, firstName, lastName },
+        form: action,
+      },
+      { status: 400 }
+    );
+  switch (action) {
+    case "login": {
+      return await login({ email, password });
+    }
+    case "register": {
+      firstName = firstName as string;
+      lastName = lastName as string;
+      return await register({ email, password, firstName, lastName });
+    }
+    default:
+      return json({ error: `Invalid Form Data` }, { status: 400 });
+  }
+};
+// export const loader: LoaderFunction = async ({ request }: any) => {
+//   // If there's already a user in the session, redirect to the home page
+//   return (await getUser(request)) ? redirect("/") : null;
+// };
 
 export default function Login() {
   const [action, setAction] = useState("login");
@@ -37,7 +104,7 @@ export default function Login() {
             ? "Login In To Give some praise!"
             : "Sign Up To Get Started"}
         </p>
-        <form action='post' className='p-6 bg-blue-100 shadow rounded-2xl w-96'>
+        <form method='post' className='p-6 bg-blue-100 shadow rounded-2xl w-96'>
           <FormField
             label='Email'
             htmlFor='email'
