@@ -1,9 +1,12 @@
+import { useState, useEffect } from "react";
+
 interface FormFieldProps {
   htmlFor: string;
   label: string;
   type?: string;
   value: any;
   onChange?: (...args: any) => any;
+  error?: string;
 }
 
 export default function FormField({
@@ -12,7 +15,14 @@ export default function FormField({
   type = "text",
   value,
   onChange = () => {},
+  error = "",
 }: FormFieldProps) {
+  const [errorText, setErrorText] = useState(error);
+
+  useEffect(() => {
+    setErrorText(error);
+  }, [error]);
+
   return (
     <>
       <label htmlFor={htmlFor} className='font-semibold text-blue-700'>
@@ -23,9 +33,15 @@ export default function FormField({
         name={htmlFor}
         id={htmlFor}
         value={value}
-        onChange={onChange}
+        onChange={(e) => {
+          onChange(e);
+          setErrorText("");
+        }}
         className='w-full p-2 my-2 rounded-xl'
       />
+      <div className='w-full text-xs font-semibold tracking-wide text-center text-red-500'>
+        {errorText || ""}
+      </div>
     </>
   );
 }

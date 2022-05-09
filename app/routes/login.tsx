@@ -1,7 +1,6 @@
-import type { ActionFunction, LoaderFunction } from "@remix-run/node";
-import { redirect, Request } from "@remix-run/node";
-import { json } from "@remix-run/node";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { json, redirect } from "@remix-run/node";
+import { useActionData } from "@remix-run/react";
 import Layout from "~/components/layout";
 import { getUser, login, register } from "~/utils/auth.server";
 import {
@@ -9,8 +8,10 @@ import {
   validateName,
   validatePassword,
 } from "~/utils/validators.server";
-import FormField from "./../components/form-field";
 
+import FormField from "../components/form-field";
+
+import type { ActionFunction, LoaderFunction } from "@remix-run/node";
 const styles = {
   button:
     "px-3 py-2 mt-2 font-semibold text-white transition duration-300 ease-in-out bg-blue-700 cursor-pointer rounded-xl hover:bg-blue-300 hover:-translate-y-1",
@@ -69,19 +70,49 @@ export const action: ActionFunction = async ({ request }) => {
       return json({ error: `Invalid Form Data` }, { status: 400 });
   }
 };
-// export const loader: LoaderFunction = async ({ request }: any) => {
-//   // If there's already a user in the session, redirect to the home page
-//   return (await getUser(request)) ? redirect("/") : null;
-// };
+export const loader: LoaderFunction = async ({ request }: any) => {
+  // If there's already a user in the session, redirect to the home page
+  return (await getUser(request)) ? redirect("/") : null;
+};
 
 export default function Login() {
+  const actionData = useActionData();
+
+  const firstLoad = useRef(true);
+  const [errors, setErrors] = useState(actionData?.errors || {});
+  const [formError, setFormError] = useState(actionData?.error || "");
+
   const [action, setAction] = useState("login");
   const [formData, setFormData] = useState({
-    email: "",
-    password: "",
-    firstName: "",
-    lastName: "",
+    email: actionData?.fields?.email || "",
+    password: actionData?.fields?.password || "",
+    firstName: actionData?.fields?.firstName || "",
+    lastName: actionData?.fields?.lastName || "",
   });
+
+  useEffect(() => {
+    if (!firstLoad.current) {
+      const newState = {
+        email: "",
+        password: "",
+        firstName: "",
+        lastName: "",
+      };
+      setErrors(newState);
+      setFormError("");
+      setFormData(newState);
+    }
+  }, [action]);
+
+  useEffect(() => {
+    if (!firstLoad.current) {
+      setFormError("");
+    }
+  }, [formData]);
+
+  useEffect(() => {
+    firstLoad.current = false;
+  }, []);
 
   const handleInputChange = (
     event: React.ChangeEvent<HTMLInputElement>,
@@ -105,11 +136,15 @@ export default function Login() {
             : "Sign Up To Get Started"}
         </p>
         <form method='post' className='p-6 bg-blue-100 shadow rounded-2xl w-96'>
+          <div className='w-full text-xs font-semibold tracking-wide text-center text-red-500'>
+            {formError}
+          </div>
           <FormField
             label='Email'
             htmlFor='email'
             value={formData.email}
             onChange={(e) => handleInputChange(e, "email")}
+            error={errors?.email}
           />
           <FormField
             label='password'
@@ -117,6 +152,7 @@ export default function Login() {
             type='password'
             value={formData.password}
             onChange={(e) => handleInputChange(e, "password")}
+            error={errors?.password}
           />
           {action === "register" && (
             <>
@@ -125,12 +161,14 @@ export default function Login() {
                 htmlFor='firstName'
                 value={formData.firstName}
                 onChange={(e) => handleInputChange(e, "firstName")}
+                error={errors?.firstName}
               />
               <FormField
                 label='Last Name'
                 htmlFor='lastName'
                 value={formData.lastName}
                 onChange={(e) => handleInputChange(e, "lastName")}
+                error={errors?.lastName}
               />
             </>
           )}
