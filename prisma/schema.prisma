@@ -8,15 +8,57 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(auto()) @map("_id") @db.ObjectId
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  email     String   @unique
-  password  String
-  profile   Profile
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  email        String   @unique
+  password     String
+  profile      Profile
+  authorTellme Tellme[] @relation("authorTellme")
+  Tellmes      Tellme[] @relation("RecievedTellme")
+
 }
 
 type Profile {
   firstName String
   lastName  String
+}
+
+enum Emoji {
+  THUMBSUP
+  PARTY
+  HANDSUP
+}
+
+enum Department {
+  MARKETING
+  SALES
+  ENGINEERING
+  HR
+}
+
+enum Color {
+  RED
+  GREEN
+  YELLOW
+  BLUE
+  WHITE
+}
+
+type TellmeStyle {
+  backgroundColor Color @default(WHITE)
+  textColor       Color @default(BLUE)
+  emoji           Emoji @default(THUMBSUP)
+}
+
+model Tellme {
+  id        String       @id @default(auto()) @map("_id") @db.ObjectId
+  message   String
+  createdAt DateTime     @default(now())
+  style     TellmeStyle?
+
+  author      User   @relation(references: [id], fields: [authorId], "authorTellme")
+  authorId    String @db.ObjectId
+  recipient   User   @relation(references: [id], fields: [recipientId], "RecievedTellme")
+  recipientId String @db.ObjectId
 }

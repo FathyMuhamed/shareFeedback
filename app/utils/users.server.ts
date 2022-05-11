@@ -28,3 +28,11 @@ export async function getOtherUsers(userId: string) {
     },
   });
 }
+
+export const getUserById = async (userId: string) => {
+  return await db.user.findUnique({
+    where: {
+      id: userId,
+    },
+  });
+};
