@@ -68,6 +68,7 @@ export async function login({ email, password }: LoginForm) {
   return createUserSession(user.id, "/");
 }
 
+//NOTE: Logout function
 export async function logout(request: Request) {
   const session = await getUserSession(request);
   return redirect("/login", {
