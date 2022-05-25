@@ -1,16 +1,52 @@
-import type { LoaderFunction } from "@remix-run/node";
-import { redirect } from "@remix-run/node";
-import { json } from "@remix-run/node";
-import { useActionData, useLoaderData } from "@remix-run/react";
-import Modal from "~/components/modal";
-import { getUser } from "~/utils/auth.server";
-import { getUserById } from "~/utils/users.server";
+import type { ActionFunction, LoaderFunction } from "@remix-run/node";
 import { useState } from "react";
-import type { TellmeStyle } from "@prisma/client";
-import UserCircle from "~/components/user-circle";
+import Modal from "~/components/modal";
 import { SelectBox } from "~/components/select-box";
-import { colorMap, emojiMap } from "~/utils/constants";
 import Tellme from "~/components/tellme";
+import UserCircle from "~/components/user-circle";
+import { getUser, requireUserId } from "~/utils/auth.server";
+import { colorMap, emojiMap } from "~/utils/constants";
+import { createTellme } from "~/utils/tellme.server";
+import { getUserById } from "~/utils/users.server";
+
+import { json, redirect } from "@remix-run/node";
+import { useActionData, useLoaderData } from "@remix-run/react";
+
+import type { TellmeStyle, Color, Emoji } from "@prisma/client";
+
+export const action: ActionFunction = async ({ request }: any) => {
+  const userId = await requireUserId(request);
+  const form = await request.formData();
+  const message = form.get("message");
+  const backgroundColor = form.get("backgroundColor");
+  const textColor = form.get("textColor");
+  const emoji = form.get("emoji");
+  const recipientId = form.get("recipientId");
+
+  if (
+    typeof message !== "string" ||
+    typeof backgroundColor !== "string" ||
+    typeof textColor !== "string" ||
+    typeof emoji !== "string"
+  ) {
+    return json({ error: `Invalid Form Data` }, { status: 400 });
+  }
+
+  if (!message.length) {
+    return json({ error: `please provider a Message` }, { status: 400 });
+  }
+  if (!recipientId.length) {
+    return json({ error: `No recipient found...` }, { status: 400 });
+  }
+
+  await createTellme(message, userId, recipientId, {
+    backgroundColor: backgroundColor as Color,
+    textColor: textColor as Color,
+    emoji: emoji as Emoji,
+  });
+
+  redirect("/home");
+};
 
 export const loader: LoaderFunction = async ({ request, params }: any) => {
   const { userId } = params;
